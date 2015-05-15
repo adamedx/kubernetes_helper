@@ -19,6 +19,5 @@ recipe do
   runit_service 'kubernetes_cluster' do
     env 'PATH' => "#{ENV['PATH']}:/usr/local/go/bin:/opt/go/bin"
     action :enable
-    sv_timeout 30000
   end
 end

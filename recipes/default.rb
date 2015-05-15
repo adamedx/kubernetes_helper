@@ -2,8 +2,24 @@
 # Cookbook Name:: kubernetes_cluster
 # Recipe:: default
 #
-# Copyright (c) 2015 The Authors, All Rights Reserved.
+# Copyright 2015, Adam Edwards
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+
+# Warning -- watch out for a monkey patch from the lxc cookbook
+# TODO: find a way to disable it!
+# https://github.com/hw-cookbooks/lxc/blob/master/libraries/monkey.rb
 
 include_recipe 'docker'
 
@@ -18,45 +34,36 @@ include_recipe 'etcd'
 include_recipe 'curl'
 include_recipe 'runit' # this will be used to run the kubernetes cluster
 
-# TODO: Since I experienced some odd behaviors (including very slow
-# compile times)  with the default recipe for
-# golang, I'm going to use an alternative method of obtaining go
-# that seems to work more reliably
-
-# include_recipe 'golang'
-
-# Get a specific version of go that is known to work
-# with kubernetes
-go_package_name = 'go1.4.2.linux-amd64.tar.gz'
-go_package_path = ::File.join(Chef::Config[:file_cache_path], go_package_name)
-
-remote_file go_package_path do
-  source "https://storage.googleapis.com/golang/#{go_package_name}"
-end
-
-go_destination = '/usr/local'
-
-bash 'unpack go' do
-  code "tar -C '#{go_destination}' -xzf #{go_package_path}"
-  not_if "bash -c #{go_destination}/go/bin/go version"
-end
+# Note that the way in which kubernetes uses build requires more RAM
+# on Linux -- go for at least 1024MB, prefereable 2048MB to avoid
+# out of memory errors from gcc
+include_recipe 'golang'
 
 # Make sure we have go in the path
 ENV['PATH'] = "#{ENV['PATH']}:/usr/local/go/bin"
 
-# Get kubernetes itself from git
+# Get kubernetes itself from git -- use a specific version because
+# I've seen that the latest master sometimes has bugs :). If you keep
+# the revision nil, we will actually not upgrade the git checkout on
+# each run to avoid instability. You can always explicitly specify
+# 'master' if you want that behavior.
+kubernetes_revision = 'v0.17.0'
+
 git '/usr/local/kubernetes' do
   repository 'https://github.com/GoogleCloudPlatform/kubernetes/'
+  checkout_branch kubernetes_revision
   depth 1
-  not_if { ::Dir.exist?('/usr/local/kubernetes/.git') }
+  only_if { ! kubernetes_revision.nil? }
+
 end
 
 # Do all the go compilation steps for kubectl and friends. This
 # is done automatically when you spin up a cluster, but we'd like to
 # pay this cost up front and do it now so cluster startup will be
 # consistently faster.
+
 bash 'build' do
-  code '/usr/local/kubernetes/hack/build-go.sh'
+  code '/usr/local/kubernetes/build/make-clean.sh;/usr/local/kubernetes/hack/build-go.sh'
   environment 'PATH' => "#{ENV['PATH']}:/usr/local/go/bin:/opt/go/bin", 'KUBE_SKIP_CONFIRMATIONS' => 'y'
   not_if '/usr/local/kubernetes/cluster/kubectl.sh --help'
 end
