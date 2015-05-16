@@ -38,6 +38,7 @@ include_recipe 'runit' # this will be used to run the kubernetes cluster
 # on Linux -- go for at least 1024MB, prefereable 2048MB to avoid
 # out of memory errors from gcc
 include_recipe 'golang'
+include_recipe 'build-essential'
 
 # Make sure we have go in the path
 ENV['PATH'] = "#{ENV['PATH']}:/usr/local/go/bin"

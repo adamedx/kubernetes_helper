@@ -4,7 +4,7 @@ maintainer_email 'adamedx'
 license          'Apache 2.0'
 description      'Installs/Configures kubernetes_helper'
 long_description 'Installs/Configures kubernetes_helper'
-version          '0.1.32'
+version          '0.1.33'
 
 supports         'ubuntu'
 
@@ -15,3 +15,4 @@ depends          'etcd'
 depends          'curl'
 depends          'runit'
 depends          'golang'
+depends          'build-essential'
