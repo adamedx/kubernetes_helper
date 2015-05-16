@@ -14,3 +14,7 @@ bin/*
 
 .kitchen/
 .kitchen.local.yml
+
+# chef-client --localmode
+cookbooks/
+nodes/
